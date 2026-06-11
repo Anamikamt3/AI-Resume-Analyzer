@@ -5,3 +5,4 @@ db.sqlite3
 venv/
 .idea/
 .vscode/
+ai_resumematcher/media/
