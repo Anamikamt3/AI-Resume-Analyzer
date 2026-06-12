@@ -63,28 +63,5 @@ The application endpoints layer will initialize live at: http://127.0.0.1:8000/
 
 This workspace includes an automated GitHub Actions continuous integration pipeline located under `.github/workflows/django.yml`. Every code push triggers an isolated cloud container instance that builds the codebase environment from scratch, installs all listed dependency requirements, and executes a system integrity check routine (`python manage.py check`) to guarantee build stability before deployments.
 
----
 
-## 📂 Project Directory Architecture Layout
 
-AI_RESUMEMATCHER/
-│
-├── .github/workflows/
-│   └── django.yml           # Automated CI Check Pipeline Configuration File
-│
-├── ai_resumematcher/        # Central App Settings & Routing Namespace Gateway
-│   ├── __init__.py
-│   ├── settings.py          # Production Security Controls & Database Configurations
-│   ├── urls.py              # Root Application API Endpoint Route Registers
-│   └── wsgi.py
-│
-├── analyzer/                # Core Functional Business Logic Application Module
-│   ├── migrations/          # Incremental Structural DB Evolution Schema Maps
-│   ├── models.py            # Relational PostgreSQL Entities Data Mappings
-│   ├── serializers.py       # JSON Serialization Transformations Data Maps
-│   ├── urls.py              # Sub-Module Network Endpoints
-│   └── views.py             # JWT Controllers & AI Extraction Pipeline Engine
-│
-├── API_DOCUMENTATION.md     # Granular REST API Request/Response Payloads Manual
-├── manage.py                # Native Django Command Line Interface Controller
-└── requirements.txt         # Production Dependency App Lock Manifest File
