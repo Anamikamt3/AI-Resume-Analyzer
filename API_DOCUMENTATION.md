@@ -1,6 +1,5 @@
-================================================================================
 AI RESUME ANALYZER & JOB MATCHER — REST API DOCUMENTATION
-================================================================================
+
 
 This documentation details the available API routing endpoints, payload schemas, 
 and token-handling structures for the AI Resume Analyzer application stack.
@@ -150,4 +149,3 @@ Response (200 OK):
 HTTP Status Codes:
 - 200 OK:          History retrieved successfully (returns empty array [] if clean).
 - 401 Unauthorized: Authorization token verification failed.
-================================================================================
