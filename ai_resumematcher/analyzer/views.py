@@ -13,6 +13,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from pypdf import PdfReader
 from groq import Groq
 from .models import Resume, JobAnalysis
+from rest_framework import permissions
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +50,222 @@ class RegisterView(APIView):
                 {"error": f"Failed to create account: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 class ResumeAnalyzeView(APIView):
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
+    # 📌 SWAGGER AUTOMATED DECORATOR COUPLING LAYER
+    @swagger_auto_schema(
+        operation_id="analyze_resume",
+        operation_description="Upload a candidate resume (.pdf or .docx) along with a target job description string to evaluate ATS alignment.",
+        manual_parameters=[
+            openapi.Parameter(
+                name='resume',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_FILE,
+                required=True,
+                description="The binary document layout structure containing candidate details (.pdf, .docx)"
+            ),
+            openapi.Parameter(
+                name='job_description',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description="The plain text block containing target organizational hiring metrics"
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="Analysis generated successfully",
+                examples={
+                    "application/json": {
+                        "match_score": 85,
+                        "skills": ["Python", "Django", "PostgreSQL"],
+                        "feedback": {
+                            "strengths": ["Clear exposure to backend API construction."],
+                            "gaps": ["Missing structural container infrastructure exposure."]
+                        },
+                        "filename": "Resume.pdf",
+                        "analyzed_at": "2026-06-12 15:45:00"
+                    }
+                }
+            ),
+            400: "Bad Request: Input parameters missing or unsupported attachment format type.",
+            401: "Unauthorized: Missing or invalid JWT authorization token header handshake.",
+            502: "Bad Gateway: LLM inference provider returned an invalid JSON object profile format."
+        }
+    )
+    def post(self, request):
+        resume_file = request.FILES.get('resume')
+        job_description = request.data.get('job_description', '').strip()
+
+        if not resume_file:
+            return Response(
+                {"error": "Please upload a valid PDF resume file."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not job_description:
+            return Response(
+                {"error": "Please provide a job description to match against."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        resume_text = ""
+        filename = resume_file.name.lower()
+
+        try:
+            if filename.endswith('.pdf'):
+                # Handle PDF extraction
+                from pypdf import PdfReader
+                reader = PdfReader(resume_file)
+                for page in reader.pages:
+                    text_content = page.extract_text()
+                    if text_content:
+                        resume_text += text_content + "\n"
+
+            elif filename.endswith('.docx') or filename.endswith('.doc'):
+                # Handle Microsoft Word extraction
+                from docx import Document
+                doc = Document(resume_file)
+                for paragraph in doc.paragraphs:
+                    if paragraph.text:
+                        resume_text += paragraph.text + "\n"
+            else:
+                return Response(
+                    {"error": "Unsupported file format. Please upload a valid .pdf or .docx file."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validation guard check to see if text extraction succeeded
+            if not resume_text.strip():
+                return Response(
+                    {"error": "Could not extract readable text from the uploaded document template."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed parsing document structural layouts: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Fetch the Groq API Key
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if not groq_key:
+            return Response(
+                {"error": "Groq API key missing in environment configuration (.env)"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # 3. Query the Groq inference engine
+        try:
+            client = Groq(api_key=groq_key)
+            
+            prompt = f"""
+            You are an expert ATS (Applicant Tracking System) optimizer. Analyze the provided resume text against the target job description text.
+            
+            Resume Text:
+            {resume_text}
+            
+            Job Description Text:
+            {job_description}
+            
+            Provide a detailed comparison analysis. You must return your entire output as a single, perfectly structured JSON object.
+            The JSON object structure must exactly match these keys (all keys are lowercase strings):
+            {{
+                "match_score": <integer between 0 and 100>,
+                "skills": [<list of strings representing top 5 relevant technical skills identified>],
+                "feedback": {{
+                    "strengths": [<list of strings detailing core strengths matching the job requirements>],
+                    "gaps": [<list of strings detailing critical requirements or keywords absent from the resume>]
+                }}
+            }}
+            """
+
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are a precise data analysis engine that outputs strictly structured validation schemas in clean JSON formatting."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3
+            )
+
+            ai_response_string = completion.choices[0].message.content
+            parsed_json_payload = json.loads(ai_response_string)
+            
+            original_filename = resume_file.name if hasattr(resume_file, 'name') else 'Resume.pdf'
+            current_time = timezone.now()
+            formatted_timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+
+            raw_score = parsed_json_payload.get("match_score") or parsed_json_payload.get("matchScore") or 0
+            try:
+                extracted_score = int(raw_score)
+            except (ValueError, TypeError):
+                extracted_score = 0
+            
+            extracted_skills = parsed_json_payload.get("skills") or parsed_json_payload.get("extracted_skills") or []
+            if not isinstance(extracted_skills, list):
+                extracted_skills = []
+
+            extracted_feedback = parsed_json_payload.get("feedback")
+            if not isinstance(extracted_feedback, dict):
+                extracted_feedback = {
+                    "strengths": parsed_json_payload.get("strengths") if isinstance(parsed_json_payload.get("strengths"), list) else [],
+                    "gaps": parsed_json_payload.get("gaps") if isinstance(parsed_json_payload.get("gaps"), list) else []
+                }
+            else:
+                if "strengths" not in extracted_feedback or not isinstance(extracted_feedback["strengths"], list):
+                    extracted_feedback["strengths"] = []
+                if "gaps" not in extracted_feedback or not isinstance(extracted_feedback["gaps"], list):
+                    extracted_feedback["gaps"] = []
+
+            with transaction.atomic():
+                resume_instance = Resume.objects.create(
+                    user=request.user,
+                    file=resume_file,
+                    extracted_text=resume_text
+                )
+                
+                JobAnalysis.objects.create(
+                    user=request.user,
+                    resume=resume_instance,
+                    job_description=job_description,
+                    match_score=extracted_score,
+                    feedback=extracted_feedback,  
+                    analyzed_at=current_time
+                )
+
+            secured_response = {
+                "match_score": extracted_score,
+                "skills": extracted_skills,
+                "feedback": extracted_feedback,
+                "filename": original_filename,
+                "analyzed_at": formatted_timestamp
+            }
+
+            return Response(secured_response, status=status.HTTP_200_OK)
+
+        except json.JSONDecodeError:
+            return Response(
+                {"error": "AI returned an invalid data structure layout. Please retry."}, 
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+        except Exception as e:
+            logger.error(f"Groq Core Analysis Exception: {str(e)}", exc_info=True)
+            return Response(
+                {"error": f"Groq Processing Failure occurred: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        '''
+class ResumeAnalyzeView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         resume_file = request.FILES.get('resume')
@@ -226,7 +441,7 @@ class ResumeAnalyzeView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-
+'''
 class DashboardHistoryView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):

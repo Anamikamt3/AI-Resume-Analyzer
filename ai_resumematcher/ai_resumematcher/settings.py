@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     
     # Local Custom Core application
     'analyzer',
+    'drf_yasg',
 ]
 
 # 5. Middleware Chain Configuration
@@ -107,3 +108,14 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}
