@@ -19,12 +19,13 @@ jobs:
         python-version: "3.11"
 
     - name: Install Dependencies
+      # 🟢 Look for requirements.txt in the root directory
       run: |
         python -m pip install --upgrade pip
-        pip install -r ai_resumematcher/requirements.txt
+        pip install -r requirements.txt
 
     - name: Run Django System Integrity Checks
-      # 🟢 This tells GitHub to jump inside your project folder before running the check
+      # 🟢 Step into the folder only for the manage.py check
       run: |
         cd ai_resumematcher
         python manage.py check
