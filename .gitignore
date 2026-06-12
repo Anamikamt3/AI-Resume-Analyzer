@@ -1,8 +1,11 @@
+
 __pycache__/
 *.pyc
 db.sqlite3
 .env
 venv/
+myenv/
 .idea/
 .vscode/
 ai_resumematcher/media/
+media/
