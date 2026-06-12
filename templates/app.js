@@ -4,6 +4,7 @@ window.isActivelyDisplayingAnalysis = false;
 window.cachedAnalysisPayload = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+    
     const loginSubmitBtn = document.getElementById("loginSubmitBtn");
     if (loginSubmitBtn) {
         loginSubmitBtn.addEventListener("click", handleLogin);
@@ -14,12 +15,14 @@ document.addEventListener("DOMContentLoaded", () => {
         registerSubmitBtn.addEventListener("click", handleRegister);
     }
 
+    // Explicitly intercept form submission to kill browser reloads dead in their tracks
     const uploadForm = document.getElementById('uploadForm');
     if (uploadForm) {
         uploadForm.addEventListener('submit', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            handleAnalyze(e); 
+            handleAnalyze(e);
+            return false;
         });
     }
 
@@ -32,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fetchHistory();
 });
+
 
 async function handleLogin(event) {
     if (event) {
@@ -158,12 +162,6 @@ async function fetchHistory() {
             `;
         }).join('');
 
-      
-        if (window.isActivelyDisplayingAnalysis && window.cachedAnalysisPayload) {
-            console.log("🛡️ Protection lock activated: Enforcing visibility on dashboard render elements...");
-            renderDashboardDOM(window.cachedAnalysisPayload);
-        }
-
     } catch (err) {
         console.error("Ledger database sync failure:", err);
     }
@@ -225,19 +223,17 @@ function renderDashboardDOM(data) {
     resultDashboard.classList.add('block');
 }
 
-
 async function handleAnalyze(event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
     
-    console.log("🚀 Analysis engine running...");
+    console.log("🚀 Analysis engine running... Hard refresh blocked permanently.");
 
     const token = localStorage.getItem('access_token');
     if (!token) {
-        alert("Your session has expired. Redirecting to login page...");
-        logout();
+        alert("No token found in local storage!");
         return;
     }
 
@@ -267,7 +263,6 @@ async function handleAnalyze(event) {
         submitBtn.innerText = "Processing...";
     }
     
-    // Reset layout view flags
     window.isActivelyDisplayingAnalysis = false;
     window.cachedAnalysisPayload = null;
 
@@ -278,30 +273,50 @@ async function handleAnalyze(event) {
     }
 
     try {
+        console.log("📡 Sending fetch request to Django backend...");
         const response = await fetch(`${BASE_API_URL}/api/analyze/`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
         
+        console.log("📡 Response received from server. Status code:", response.status);
+
         if (response.status === 401 || response.status === 403) {
-            alert("Your login session has timed out. Please log in again to renew your credentials.");
-            logout();
+            alert("Your login session has timed out. (LOGOUT REFRESH DISABLED FOR DEBUGGING)");
+            // logout(); // 🛑 DISABLED SO IT CANNOT REFRESH THE PAGE anymore!
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Analyze Core Fit";
+            }
+            if (loadingState) loadingState.classList.add('hidden');
             return;
         }
 
-        const data = await response.json();
-        console.log("📦 Data packet successfully received:", data);
+        // Safe JSON extraction net
+        let data;
+        try {
+            data = await response.json();
+            console.log("📦 Parsed JSON payload data:", data);
+        } catch (jsonErr) {
+            console.error("🛑 Server didn't send valid JSON text:", jsonErr);
+            alert("The server processed successfully but did not send clean data back.");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Analyze Core Fit";
+            }
+            if (loadingState) loadingState.classList.add('hidden');
+            return;
+        }
 
         if (response.ok) {
-            // Set global persistence variables before applying rendering modifications
             window.cachedAnalysisPayload = data;
             window.isActivelyDisplayingAnalysis = true;
 
-            // Render out data directly onto screen
+            // Render out layout changes safely
             renderDashboardDOM(data);
 
-            // Directly inject running entry into the local layout row array
+            // Directly update local table elements
             const tbody = document.getElementById('historyTableBody');
             if (tbody) {
                 if (tbody.innerHTML.includes("No matching scan records")) {
@@ -324,23 +339,22 @@ async function handleAnalyze(event) {
                 `;
                 tbody.insertAdjacentHTML('afterbegin', newRowHtml);
             }
+            console.log("🎯 DOM elements drawn completely. Screen state locked.");
 
         } else {
-            alert("Analysis Processing Error: " + (data.error || "The server failed to parse your documents."));
+            alert("Analysis Processing Error: " + (data.error || "The server failed to parse documents."));
         }
     } catch (err) {
-        console.error("❌ Exception trace:", err);
-        alert("A system network transmission exception occurred. Please try again.");
+        console.error("❌ Network Transmission Exception:", err);
+        alert("A system network transmission exception occurred.");
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerText = "Analyze Core Fit";
         }
         if (loadingState) loadingState.classList.add('hidden');
-        
     }
 }
-
 
 function logout() {
     localStorage.clear();
