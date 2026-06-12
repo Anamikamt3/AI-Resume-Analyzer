@@ -19,13 +19,16 @@ jobs:
         python-version: "3.11"
 
     - name: Install Dependencies
-      # 🟢 Look for requirements.txt in the root directory
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Run Django System Integrity Checks
-      # 🟢 Step into the folder only for the manage.py check
+      # 🟢 Pass a dummy connection string to satisfy django-environ checks
+      env:
+        DATABASE_URL: sqlite:////tmp/db.sqlite3
+        GROQ_API_KEY: dummy_key_for_testing
+        SECRET_KEY: dummy_secret_key_for_testing
       run: |
         cd ai_resumematcher
         python manage.py check
