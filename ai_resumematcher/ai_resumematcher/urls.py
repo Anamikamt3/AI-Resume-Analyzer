@@ -14,6 +14,15 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
+from django.http import FileResponse
+from django.conf import settings
+
+# This function manually finds your file and serves it
+def serve_app_js(request):
+    # This path points to the 'templates' folder where your app.js is
+    file_path = os.path.join(settings.BASE_DIR.parent, 'templates', 'app.js')
+    return FileResponse(open(file_path, 'rb'), content_type='application/javascript')
 
 from django.contrib import admin
 from django.urls import path, include , re_path
@@ -39,6 +48,7 @@ urlpatterns = [
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('app.js', serve_app_js),  # <--- ADD THIS LINE
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

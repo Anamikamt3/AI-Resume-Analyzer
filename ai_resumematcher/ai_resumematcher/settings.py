@@ -66,6 +66,7 @@ TEMPLATES = [
             BASE_DIR / 'templates', 
             BASE_DIR.parent / 'templates'
         ],
+        
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -123,17 +124,18 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = 'static/'
 
 # FIX: Force Django to search your precise root folders using absolute pathing
-STATICFILES_DIRS = [
+'''STATICFILES_DIRS = [
     path for path in [
         os.path.join(BASE_DIR, 'static'),
         os.path.join(BASE_DIR.parent, 'static'),
     ] if os.path.exists(path)
-]
-'''STATICFILES_DIRS = [
-    #os.path.join(BASE_DIR, 'static'),
-    #os.path.join(BASE_DIR.parent, 'static'),
-    os.path.join(BASE_DIR, 'static'),
 ]'''
+
+STATICFILES_DIRS = [
+    #os.path.join(BASE_DIR, 'templates'),
+    os.path.join(BASE_DIR.parent, 'templates'),
+]
+
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder', 
