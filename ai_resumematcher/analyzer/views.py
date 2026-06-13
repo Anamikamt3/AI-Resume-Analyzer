@@ -296,3 +296,12 @@ class DashboardHistoryView(APIView):
             return Response({"error": "Failed to load history Ledger"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
        
+from django.views.generic import TemplateView
+
+# Serves the login page at the root URL
+class LoginTemplateView(TemplateView):
+    template_name = "login.html"
+
+# Serves the dashboard page
+class DashboardTemplateView(TemplateView):
+    template_name = "dashboard.html"

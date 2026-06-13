@@ -60,7 +60,12 @@ ROOT_URLCONF = 'ai_resumematcher.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        #'DIRS': [],
+        # 'DIRS': [BASE_DIR / 'templates'], # <-- FIX: Tell Django to look at your root templates folder
+        'DIRS': [
+            BASE_DIR / 'templates', 
+            BASE_DIR.parent / 'templates'
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -115,6 +120,13 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+STATIC_URL = 'static/'
+
+# FIX: Force Django to search your precise root folders using absolute pathing
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR),
+    os.path.join(BASE_DIR.parent),
+]
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder', 
