@@ -124,8 +124,16 @@ STATIC_URL = 'static/'
 
 # FIX: Force Django to search your precise root folders using absolute pathing
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    path for path in [
+        os.path.join(BASE_DIR, 'static'),
+        os.path.join(BASE_DIR.parent, 'static'),
+    ] if os.path.exists(path)
 ]
+'''STATICFILES_DIRS = [
+    #os.path.join(BASE_DIR, 'static'),
+    #os.path.join(BASE_DIR.parent, 'static'),
+    os.path.join(BASE_DIR, 'static'),
+]'''
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder', 
