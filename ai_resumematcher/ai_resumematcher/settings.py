@@ -3,6 +3,11 @@ import os
 import environ
 from pathlib import Path
 from datetime import timedelta
+import mimetypes
+
+# Force Windows to recognize correct CSS and JS types
+mimetypes.add_type("text/css", ".css", True)
+mimetypes.add_type("application/javascript", ".js", True)
 
 # 1. Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,7 +18,9 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # 3. Security Settings (Pulled dynamically from secure local .env variables)
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-fallback-key-for-local-dev')
-DEBUG = env('DEBUG')
+
+# FIX: Allow DEBUG to pull from env, but default to True locally so runserver can serve assets!
+DEBUG = env.bool('DEBUG', default=True)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
 # 4. Installed Application Modules Register
@@ -29,23 +36,23 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'drf_yasg', 
     
     # Local Custom Core application
     'analyzer',
-    'drf_yasg',
 ]
 
 # 5. Middleware Chain Configuration
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Handles connecting across origins safely
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # FIX: Moved to the top right after SecurityMiddleware!
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', 
 ]
 
 ROOT_URLCONF = 'ai_resumematcher.urls'
@@ -68,7 +75,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ai_resumematcher.wsgi.application'
 
 # 6. Database Core Integration Configuration
-# Removed the hardcoded string containing passwords to guarantee full compliance with Git security scans
 DATABASES = {
     'default': env.db('DATABASE_URL')
 }
@@ -104,12 +110,16 @@ SIMPLE_JWT = {
 }
 
 # 11. Storage Configurations handling static and asset document uploads
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'  # Added forward slash for path uniformity
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # <-- ADD THIS LINE
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# This tells Django to compress and cache your static assets efficiently
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder', 
+]
+
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
