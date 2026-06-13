@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
         registerSubmitBtn.addEventListener("click", handleRegister);
     }
 
-    // Explicitly intercept form submission to kill browser reloads dead in their tracks
     const uploadForm = document.getElementById('uploadForm');
     if (uploadForm) {
         uploadForm.addEventListener('submit', (e) => {
@@ -284,7 +283,6 @@ async function handleAnalyze(event) {
 
         if (response.status === 401 || response.status === 403) {
             alert("Your login session has timed out. (LOGOUT REFRESH DISABLED FOR DEBUGGING)");
-            // logout(); // 🛑 DISABLED SO IT CANNOT REFRESH THE PAGE anymore!
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Analyze Core Fit";
