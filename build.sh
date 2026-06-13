@@ -6,7 +6,6 @@ set -o errexit
 pip install -r requirements.txt
 
 # Collect all static files into 'staticfiles' directory
-python manage.py collectstatic --no-input
-
+python ai_resumematcher/manage.py collectstatic --no-input
 # Run database migrations automatically
-python manage.py migrate
+python ai_resumematcher/manage.py migrate
